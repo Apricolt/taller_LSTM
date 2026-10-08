@@ -1,0 +1,27 @@
+{
+ "id": "grid_B_n24_B",
+ "nombre": "B. LSTM profunda",
+ "arquitectura": "B",
+ "ventana": 24,
+ "tratamiento": "B",
+ "features": [
+  "demanda",
+  "temperatura_c",
+  "humedad_pct",
+  "radiacion_wm2",
+  "precio_kwh",
+  "hora_sin",
+  "hora_cos",
+  "dia_sin",
+  "dia_cos",
+  "mes_sin",
+  "mes_cos",
+  "fin_semana",
+  "festivo",
+  "flag_exogena_rellenada"
+ ],
+ "criterio": "menor RMSE de validación en la grilla",
+ "RMSE_val": 25.0646078251947,
+ "RMSE_test": 24.127545445283225,
+ "R2_test": 0.9064478845850316
+}

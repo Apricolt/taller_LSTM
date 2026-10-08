@@ -103,14 +103,18 @@ if modo.startswith("1") or modo.startswith("2"):
         rad = c3.slider("Radiación (W/m²)", 0.0, 1100.0, float(round(base.radiacion_wm2, 0)), 10.0)
         precio = c4.slider("Precio (por kWh)", 5.0, 50.0, float(round(base.precio_kwh, 2)), 0.5)
         c5, c6 = st.columns(2)
-        festivo = c5.checkbox("Festivo", value=bool(base.festivo))
+        dia_t = ventana["timestamp"].dt.date == t.date()
+        festivo = c5.checkbox(f"Festivo (todas las horas del {t:%d-%b} en la ventana)", value=bool(base.festivo),
+                              help="Un festivo dura el día completo. Marcar solo una hora casi no cambia la predicción, "
+                                   "porque el modelo aprendió el efecto a partir de días festivos completos.")
         delta = c6.slider("Desplazar la temperatura de TODA la ventana (°C)", -10.0, 10.0, 0.0, 0.5,
                           help="Simula un día más caluroso o más frío que el real.")
         escenario = ventana.copy()
         escenario["temperatura_c"] += delta
         ult = escenario.index[-1]
-        escenario.loc[ult, ["temperatura_c", "humedad_pct", "radiacion_wm2", "precio_kwh", "festivo"]] = \
-            [temp + delta, hum, rad, precio, int(festivo)]
+        escenario.loc[ult, ["temperatura_c", "humedad_pct", "radiacion_wm2", "precio_kwh"]] = \
+            [temp + delta, hum, rad, precio]
+        escenario.loc[dia_t, "festivo"] = int(festivo)
         p_orig, p_esc = predecir(modelo, esc, ventana, features), predecir(modelo, esc, escenario, features)
         c1, c2, c3 = st.columns(3)
         c1.metric("Predicción con datos reales", f"{p_orig:.1f} MW")
