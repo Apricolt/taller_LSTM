@@ -1,8 +1,10 @@
 """App de predicción de demanda eléctrica (hora siguiente) con el modelo LSTM elegido.
 
-Ejecutar desde la raíz del proyecto:   .venv/Scripts/streamlit run app/app.py
+Ejecutar desde la raíz del proyecto:   streamlit run app/app.py
+
+El modelo se carga desde app/modelo_demanda.joblib (generado con src/exportar_modelo.py),
+que incluye la red entrenada y los parámetros de normalización calculados con train.
 """
-import json
 import os
 import sys
 from pathlib import Path
@@ -11,11 +13,11 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 
+import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
-import keras
 
 import preparacion as P
 import limpieza as L
@@ -27,18 +29,19 @@ st.set_page_config(page_title="Predicción de demanda LSTM", page_icon="⚡", la
 
 @st.cache_resource
 def cargar():
-    cfg = json.loads((RAIZ / "resultados/modelo_produccion.json").read_text(encoding="utf-8"))
-    modelo = keras.models.load_model(RAIZ / "resultados/modelos" / f"{cfg['id']}.keras")
+    paquete = joblib.load(RAIZ / "app" / "modelo_demanda.joblib")
     limpio = pd.read_parquet(RAIZ / "data/processed/dataset_limpio.parquet")
-    # Los escaladores se reconstruyen exactamente igual que en el entrenamiento (ajustados con train).
-    esc = P.preparar(limpio, cfg["ventana"], cfg["tratamiento"])["escaladores"]
-    feats = P.construir_variables(limpio, cfg["tratamiento"])
-    return cfg, modelo, esc, feats
+    feats = P.construir_variables(limpio, paquete["config"]["tratamiento"])
+    return paquete["config"], paquete["modelo"], paquete, feats
 
 
-def predecir(modelo, esc, ventana_df, features):
-    X = esc.transformar_x(ventana_df[features].to_numpy(dtype="float32")[None, ...])
-    return float(esc.invertir_y(modelo.predict(X, verbose=0))[0])
+def predecir(modelo, paquete, ventana_df, features):
+    """Normaliza la ventana con los parámetros de train, predice y devuelve MW."""
+    X = ventana_df[features].to_numpy(dtype="float32")[None, ...].copy()
+    ex, ey = paquete["escalador_x"], paquete["escalador_y"]
+    X[..., ex["indices"]] = (X[..., ex["indices"]] - ex["media"]) / ex["escala"]
+    y_esc = float(modelo.predict(X, verbose=0).ravel()[0])
+    return y_esc * ey["escala"] + ey["media"]
 
 
 def grafico_ventana(ventana_df, t_obj, pred, real=None):
@@ -55,7 +58,7 @@ def grafico_ventana(ventana_df, t_obj, pred, real=None):
     return fig
 
 
-cfg, modelo, esc, feats = cargar()
+cfg, modelo, paquete, feats = cargar()
 n, features = cfg["ventana"], cfg["features"]
 
 st.title("⚡ Predicción de demanda eléctrica — hora siguiente")
@@ -85,7 +88,7 @@ if modo.startswith("1") or modo.startswith("2"):
     real = feats.at[i, "demanda_objetivo"]
 
     if modo.startswith("1"):
-        pred = predecir(modelo, esc, ventana, features)
+        pred = predecir(modelo, paquete, ventana, features)
         c1, c2, c3 = st.columns(3)
         c1.metric("Predicción", f"{pred:.1f} MW")
         c2.metric("Real", "—" if np.isnan(real) else f"{real:.1f} MW")
@@ -115,7 +118,7 @@ if modo.startswith("1") or modo.startswith("2"):
         escenario.loc[ult, ["temperatura_c", "humedad_pct", "radiacion_wm2", "precio_kwh"]] = \
             [temp + delta, hum, rad, precio]
         escenario.loc[dia_t, "festivo"] = int(festivo)
-        p_orig, p_esc = predecir(modelo, esc, ventana, features), predecir(modelo, esc, escenario, features)
+        p_orig, p_esc = predecir(modelo, paquete, ventana, features), predecir(modelo, paquete, escenario, features)
         c1, c2, c3 = st.columns(3)
         c1.metric("Predicción con datos reales", f"{p_orig:.1f} MW")
         c2.metric("Predicción del escenario", f"{p_esc:.1f} MW", f"{p_esc - p_orig:+.1f} MW")
@@ -152,6 +155,6 @@ else:
         if ventana[features].isna().any().any():
             st.error("La ventana tiene valores faltantes que no se pueden rellenar (huecos > 3 h)."); st.stop()
         t_obj = ventana["timestamp"].iloc[-1] + pd.Timedelta(hours=1)
-        pred = predecir(modelo, esc, ventana, features)
+        pred = predecir(modelo, paquete, ventana, features)
         st.metric(f"Demanda predicha para {t_obj:%Y-%m-%d %H:%M}", f"{pred:.1f} MW")
         st.pyplot(grafico_ventana(ventana, t_obj, pred))

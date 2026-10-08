@@ -1,0 +1,11 @@
+# Dependencias mínimas para desplegar la app (Streamlit Community Cloud).
+# Versiones fijas: el modelo en modelo_demanda.joblib se guardó con keras 3.15.1 / tensorflow 2.21.0.
+streamlit==1.65.0
+tensorflow==2.21.0
+keras==3.15.1
+numpy==2.5.3
+pandas==3.0.6
+pyarrow==25.0.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+joblib==1.6.0
