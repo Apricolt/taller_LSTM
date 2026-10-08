@@ -1,0 +1,9 @@
+# Entorno virtual y cachés
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Logs de entrenamiento y corridas descartadas
+resultados/*.log
+resultados/_obsoleto_*/
