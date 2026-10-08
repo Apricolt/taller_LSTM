@@ -52,7 +52,9 @@ def grafico_ventana(ventana_df, t_obj, pred, real=None):
     if real is not None and not np.isnan(real):
         ax.scatter([t_obj], [real], color=TINTA_2, s=70, zorder=3, marker="o", facecolors="none",
                    linewidths=2, label=f"real: {real:.1f} MW")
-    ax.set_ylabel("MW"); ax.legend(loc="upper left", fontsize=9)
+    ax.set_ylabel("MW")
+    # Leyenda debajo del gráfico para que no tape la serie
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.28), ncol=3, fontsize=9)
     ax.set_title(f"Ventana de {len(ventana_df)} h usada como entrada → predicción para {t_obj:%Y-%m-%d %H:%M}")
     ax.tick_params(axis="x", rotation=20, labelsize=8)
     return fig

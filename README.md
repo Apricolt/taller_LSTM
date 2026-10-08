@@ -1,5 +1,7 @@
 # Taller LSTM: predicción de demanda eléctrica de la hora siguiente
 
+**App desplegada:** https://tallerlstm-yvmkqcgmmz6v62dwmssx6u.streamlit.app/
+
 Proyecto para diseñar, comparar y justificar arquitecturas LSTM que predicen la demanda de la hora siguiente a partir de una ventana de *n* horas (12, 24, 48).
 
 ## Estructura
